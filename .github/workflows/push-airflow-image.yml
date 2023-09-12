@@ -8,7 +8,7 @@ on:
 
 jobs:
 
-  build:
+  build_and_publish:
 
     runs-on: ubuntu-latest
 
@@ -24,6 +24,12 @@ jobs:
       with:
         username: ${{ secrets.DOCKERHUB_USERNAME }}
         password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+
+    - name: Configurar variável de saída
+      id: my_step
+      run: echo "::set-output name=MINHA_VARIAVEL::valor_da_variavel"
+
 
     - uses: actions/checkout@v3
     - name: Build the Docker image
