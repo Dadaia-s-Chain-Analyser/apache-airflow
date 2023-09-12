@@ -14,7 +14,7 @@ jobs:
 
 
     env:
-      IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/dm_structure:$(date +%s)
+      IMAGE_NAME: ${{ secrets.DOCKERHUB_USERNAME }}/dm_structure_apache_airflow:$(date +%s)
 
     steps:
 
@@ -30,8 +30,3 @@ jobs:
       run: |
         docker build -t $IMAGE_NAME .
         docker push $IMAGE_NAME
-
-    steps:
-    - uses: actions/checkout@v3
-    - name: Build the Docker image
-      run: docker build . --file Dockerfile --tag my-image-name:$(date +%s)
