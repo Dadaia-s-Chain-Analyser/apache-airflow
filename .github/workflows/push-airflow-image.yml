@@ -34,4 +34,4 @@ jobs:
     - name: Build the Docker image
       run: |
         docker build -t ${{ steps.my_step.outputs.MINHA_VARIAVEL }} .
-        docker push ${{ steps.my_step.outputs.$MINHA_VARIAVEL }}
+        docker push ${{ steps.my_step.outputs.MINHA_VARIAVEL }}
