@@ -1,5 +1,5 @@
 # Base Image
-FROM spark-base:latest
+FROM marcoaureliomenezes/spark-base:1.0.0
 
 # Arguments that can be set with docker build
 ARG AIRFLOW_VERSION=2.1.4
