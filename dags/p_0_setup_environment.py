@@ -7,7 +7,6 @@ from airflow.operators.bash import BashOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 from airflow.utils.trigger_rule import TriggerRule
 from airflow.providers.apache.hive.operators.hive import HiveOperator
-from scripts.python.ingest_contract_txs_to_hadoop import run_ingestor
 from scripts.hive.handle_hive_tables import create_batch_transactions_table
 load_dotenv()
 

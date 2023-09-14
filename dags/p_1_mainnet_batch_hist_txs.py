@@ -6,7 +6,10 @@ from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
 from airflow.providers.docker.operators.docker import DockerOperator
 from airflow.providers.apache.spark.operators.spark_submit import SparkSubmitOperator
-from scripts.python.ingest_contract_txs_to_hadoop import run_ingestor
+from scripts.python.pipeline_1_packages.get_data_from_chain_and_cache import get_data_from_chain_and_cache
+from scripts.python.pipeline_1_packages.ingest_contract_txs_to_hadoop import store_cached_data_to_hadoop
+from scripts.python.pipeline_1_packages.ingest_contract_txs_to_azure import store_to_azure_adls
+from scripts.python.pipeline_1_packages.cleaning_cache import delete_cached_data
 
 load_dotenv()
 
@@ -20,15 +23,11 @@ default_args ={
 }
 
 
-COMMON_PARMS = dict(
-        image="marcoaureliomenezes/batch-contract-txs:latest",
-        api_version='auto', 
-        docker_url="unix:///var/run/docker.sock",
-        network_mode='hadoop-network',
-        auto_remove=True,
-        mount_tmp_dir=False)
-
-
+SPN_CREDENTIALS = dict(
+        AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
+        AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
+        AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET'],
+)
 
 
 with DAG(
@@ -46,154 +45,163 @@ with DAG(
         bash_command="""sleep 2"""
     )
 
-    get_aave_v2_txs = DockerOperator(
+    get_aave_v2_txs = PythonOperator(
         task_id="get_aave_v2_txs",
-        entrypoint=["python", "-u", "1_get_and_cache_contract_txs.py"],
+        python_callable=get_data_from_chain_and_cache,
         depends_on_past=True,
         environment=dict(
-                        NETWORK = 'mainnet',
-                        AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
-                        AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
-                        AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET'],
+                        NETWORK = os.environ['NETWORK'],
+                        REDIS_SERVICE = "redis",
+                        REDIS_PORT = 6379,
                         KEY_VAULT_SCAN_NAME = os.environ['KEY_VAULT_SCAN_NAME'],
                         KEY_VAULT_SCAN_SECRET = 'etherscan-api-key-1',
-                        CONTRACT = '0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9',
+                        CONTRACT = os.environ['MAINNET_AAVE_V2_POOL'],
                         CONTRACT_NAME = 'aave_v2',
                         START_DATE = "{{ prev_ds }}",
-                        END_DATE = "{{ ds }}"
-                        ),
-        **COMMON_PARMS
+                        END_DATE = "{{ ds }}",
+                        **SPN_CREDENTIALS
+        )
     )
 
 
     get_aave_v3_txs = DockerOperator(
         task_id="get_aave_v3_txs",
-        entrypoint=["python", "-u", "1_get_and_cache_contract_txs.py"],
+        container_name="get_aave_v3_txs",
+        python_callable=get_data_from_chain_and_cache,
         depends_on_past=True,
         environment=dict(
-                        NETWORK = 'mainnet',
-                        AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
-                        AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
-                        AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET'],
+                        NETWORK = os.environ['NETWORK'],
+                        REDIS_SERVICE = "redis",
+                        REDIS_PORT = 6379,
                         KEY_VAULT_SCAN_NAME = os.environ['KEY_VAULT_SCAN_NAME'],
                         KEY_VAULT_SCAN_SECRET = 'etherscan-api-key-1',
-                        CONTRACT = '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
+                        CONTRACT = os.environ['MAINNET_AAVE_V3_POOL'],
                         CONTRACT_NAME = 'aave_v3',
                         START_DATE = "{{ prev_ds }}",
-                        END_DATE = "{{ ds }}"
-                        ),
-        **COMMON_PARMS
+                        END_DATE = "{{ ds }}",
+                        **SPN_CREDENTIALS
+        )
     )
 
-    get_uniswap_v2_txs = DockerOperator(
+    get_uniswap_v2_txs = PythonOperator(
         task_id="get_uniswap_v2_txs",
-        entrypoint=["python", "-u", "1_get_and_cache_contract_txs.py"],
+        python_callable=get_data_from_chain_and_cache,
         depends_on_past=True,
-        environment=dict(
-                        NETWORK = 'mainnet',
-                        AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
-                        AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
-                        AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET'],
+        op_kwargs=dict(
+                        NETWORK = os.environ['NETWORK'],
+                        REDIS_SERVICE = "redis",
+                        REDIS_PORT = 6379,
                         KEY_VAULT_SCAN_NAME = os.environ['KEY_VAULT_SCAN_NAME'],
                         KEY_VAULT_SCAN_SECRET = 'etherscan-api-key-1',
-                        CONTRACT = '0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D',
+                        CONTRACT = os.environ['MAINNET_UNISWAP_V2_ROUTER_02'],
                         CONTRACT_NAME = 'uniswap_v2',
                         START_DATE = "{{ prev_ds }}",
-                        END_DATE = "{{ ds }}"
-                        ),
-        **COMMON_PARMS
+                        END_DATE = "{{ ds }}",
+                        **SPN_CREDENTIALS
+        )
     )
 
     ingest_aave_v2_txs_to_hadoop = PythonOperator(
         task_id="ingest_aave_v2_txs_to_hadoop",
-        python_callable=run_ingestor,
-        op_kwargs=dict(network='mainnet', contract_name='aave_v2', start_date="{{ prev_ds }}"),
+        python_callable=store_cached_data_to_hadoop,
+        op_kwargs=dict(
+                        network=os.environ['NETWORK'], 
+                        contract_name='aave_v2', 
+                        start_date="{{ prev_ds }}"
+        )
     )
+
 
     ingest_aave_v3_txs_to_hadoop = PythonOperator(
         task_id="ingest_aave_v3_txs_to_hadoop",
-        python_callable=run_ingestor,
-        op_kwargs=dict(network='mainnet', contract_name='aave_v3', start_date="{{ prev_ds }}"),
+        python_callable=store_cached_data_to_hadoop,
+        op_kwargs=dict(
+                        network=os.environ['NETWORK'], 
+                        contract_name='aave_v3', 
+                        start_date="{{ prev_ds }}"
+        ),
     )
+
 
     ingest_uniswap_v2_txs_to_hadoop = PythonOperator(
         task_id="ingest_uniswap_v2_txs_to_hadoop",
-        python_callable=run_ingestor,
-        op_kwargs=dict(network='mainnet', contract_name='uniswap_v2', start_date="{{ prev_ds }}"),
+        python_callable=store_cached_data_to_hadoop,
+        op_kwargs=dict(
+                        network=os.environ['NETWORK'],
+                        contract_name='uniswap_v2',
+                        start_date="{{ prev_ds }}"
+        ),
     )
 
-    ingest_aave_v2_txs_to_azure = DockerOperator(
+
+    ingest_aave_v2_txs_to_azure = PythonOperator(
         task_id="ingest_aave_v2_txs_to_azure",
-        container_name="ingest_aave_v2_txs_to_azure",
-        entrypoint=["python", "-u", "3_ingest_contract_txs_to_adls.py"],
-        environment=dict(
-                        NETWORK = 'mainnet',
-                        AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
-                        AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
-                        AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET'],
+        python_callable=store_to_azure_adls,
+        op_kwargs=dict(
+                        NETWORK = os.environ['NETWORK'],
                         CONTRACT_NAME = 'aave_v2',
-                        START_DATE = "{{ prev_ds }}"),
-
-        **COMMON_PARMS
+                        START_DATE = "{{ prev_ds }}",
+                        **SPN_CREDENTIALS
+        )
     )
 
-    ingest_aave_v3_txs_to_azure = DockerOperator(
+    ingest_aave_v3_txs_to_azure = PythonOperator(
         task_id="ingest_aave_v3_txs_to_azure",
-        container_name="ingest_aave_v3_txs_to_azure",
-        entrypoint=["python", "-u", "3_ingest_contract_txs_to_adls.py"],
-        environment=dict(
-                        NETWORK = 'mainnet',
-                        AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
-                        AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
-                        AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET'],
+        python_callable=store_to_azure_adls,
+        op_kwargs=dict(
+                        NETWORK = os.environ['NETWORK'],
                         CONTRACT_NAME = 'aave_v3',
-                        START_DATE = "{{ prev_ds }}"),
-        **COMMON_PARMS
+                        START_DATE = "{{ prev_ds }}",
+                        **SPN_CREDENTIALS
+        )
     )
 
-    ingest_uniswap_v2_txs_to_azure = DockerOperator(
+    ingest_uniswap_v2_txs_to_azure = PythonOperator(
         task_id="ingest_uniswap_v2_txs_to_azure",
-        container_name="ingest_uniswap_v2_txs_to_azure",
-        entrypoint=["python", "-u", "3_ingest_contract_txs_to_adls.py"],
-        environment=dict(
-                        NETWORK = 'mainnet',
-                        AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
-                        AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
-                        AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET'],
+        python_callable=store_to_azure_adls,
+        op_kwargs=dict(
+                        NETWORK = os.environ['NETWORK'],
                         CONTRACT_NAME = 'uniswap_v2',
-                        START_DATE = "{{ prev_ds }}"),
-        **COMMON_PARMS
+                        START_DATE = "{{ prev_ds }}",
+                        **SPN_CREDENTIALS
+        )
     )
 
-    delete_aave_v2_cache = DockerOperator(
+
+    delete_aave_v2_cache = PythonOperator(
         task_id="delete_aave_v2_cache",
-        container_name="delete_aave_v2_cache",
-        entrypoint=["python", "-u", "4_delete_cached_key.py"],
-        environment=dict(
+        python_callable=delete_cached_data,
+        op_kwargs=dict(
+                        REDIS_SERVICE = "redis",
+                        REDIS_PORT = 6379,
                         CONTRACT_NAME = 'aave_v2',
-                        START_DATE = "{{ prev_ds }}"),
-        **COMMON_PARMS
+                        START_DATE = "{{ prev_ds }}"
+        )
     )
 
-    delete_aave_v3_cache = DockerOperator(
+
+    delete_aave_v3_cache = PythonOperator(
         task_id="delete_aave_v3_cache",
-        container_name="delete_aave_v3_cache",
-        entrypoint=["python", "-u", "4_delete_cached_key.py"],
-        environment=dict(
+        python_callable=delete_cached_data,
+        op_kwargs=dict(
+                        REDIS_SERVICE = "redis",
+                        REDIS_PORT = 6379,
                         CONTRACT_NAME = 'aave_v3',
-                        START_DATE = "{{ prev_ds }}"),
-        **COMMON_PARMS
+                        START_DATE = "{{ prev_ds }}"
+
+        )
     )
 
 
-    delete_uniswap_v2_cache = DockerOperator(
+    delete_uniswap_v2_cache = PythonOperator(
         task_id="delete_uniswap_v2_cache",
-        container_name="delete_uniswap_v2_cache",
-        entrypoint=["python", "-u", "4_delete_cached_key.py"],
-        environment=dict(
+        python_callable=delete_cached_data,
+        op_kwargs=dict(
+                        REDIS_SERVICE = "redis",
+                        REDIS_PORT = 6379,
                         CONTRACT_NAME = 'uniswap_v2',
-                        START_DATE = "{{ prev_ds }}"),
-        **COMMON_PARMS
+                        START_DATE = "{{ prev_ds }}"
+        )
     )
 
     # Passing execution date as parameter to the spark job
@@ -203,7 +211,7 @@ with DAG(
         application="/opt/airflow/dags/scripts/spark/transactions_processing.py",
         verbose=False,
         conf={"spark.driver.memory": "10G"},
-        application_args=['mainnet', "aave_v2", "{{ ds }}"]
+        application_args=[os.environ['NETWORK'], "aave_v2", "{{ ds }}"]
     )
 
     # Passing execution date as parameter to the spark job
@@ -213,7 +221,7 @@ with DAG(
         application="/opt/airflow/dags/scripts/spark/transactions_processing.py",
         verbose=False,
         conf={"spark.driver.memory": "10G"},
-        application_args=['mainnet', "aave_v3", "{{ ds }}"]
+        application_args=[os.environ['NETWORK'], "aave_v3", "{{ ds }}"]
     )
 
     # Passing execution date as parameter to the spark job
@@ -223,7 +231,7 @@ with DAG(
         application="/opt/airflow/dags/scripts/spark/transactions_processing.py",
         verbose=False,
         conf={"spark.driver.memory": "10G"},
-        application_args=['mainnet', "uniswap_v2", "{{ ds }}"]
+        application_args=[os.environ['NETWORK'], "uniswap_v2", "{{ ds }}"]
     )
 
 
@@ -232,7 +240,7 @@ with DAG(
     #     container_name="get_aave_v3_txs",
     #     entrypoint=["python", "1_get_and_cache_contract_txs.py", "--start_date", start_date, "--end_date", end_date],
     #     environment=dict(
-    #                     NETWORK = 'mainnet',
+    #                     NETWORK = os.environ['NETWORK'],
     #                     AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
     #                     AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
     #                     AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET'],
@@ -248,7 +256,7 @@ with DAG(
     #     container_name="ingest_aave_v3_txs_to_azure",
     #     entrypoint=["python", "-u", "3_ingest_contract_txs_to_adls.py"],
     #     environment=dict(
-    #                     NETWORK = 'mainnet',
+    #                     NETWORK = os.environ['NETWORK'],
     #                     AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
     #                     AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
     #                     AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET']),
@@ -260,7 +268,7 @@ with DAG(
     #     container_name="get_uniswap_v2_txs",
     #     entrypoint=["python", "-u", "5_batch_contract_transactions.py", "--start_date", "2022-01-01"],
     #     environment=dict(
-    #                     NETWORK = 'mainnet',
+    #                     NETWORK = os.environ['NETWORK'],
     #                     AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
     #                     AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
     #                     AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET'],
@@ -277,7 +285,7 @@ with DAG(
     #     container_name="ingest_uniswap_v2_txs_to_azure",
     #     entrypoint=["python", "-u", "3_ingest_contract_txs_to_adls.py"],
     #     environment=dict(
-    #                     NETWORK = 'mainnet',
+    #                     NETWORK = os.environ['NETWORK'],
     #                     AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
     #                     AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
     #                     AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET']),
@@ -290,7 +298,7 @@ with DAG(
     #     container_name="get_uniswap_v3_txs",
     #     entrypoint=["python", "-u", "5_batch_contract_transactions.py", "--start_date", "2022-01-01"],
     #     environment=dict(
-    #                     NETWORK = 'mainnet',
+    #                     NETWORK = os.environ['NETWORK'],
     #                     AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
     #                     AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
     #                     AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET'],
@@ -308,7 +316,7 @@ with DAG(
     #     container_name="ingest_uniswap_v3_txs_to_azure",
     #     entrypoint=["python", "-u", "3_ingest_contract_txs_to_adls.py"],
     #     environment=dict(
-    #                     NETWORK = 'mainnet',
+    #                     NETWORK = os.environ['NETWORK'],
     #                     AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
     #                     AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
     #                     AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET']),
@@ -320,7 +328,7 @@ with DAG(
     #     container_name="decode_uniswap_v2_input_txs",
     #     entrypoint=f"python tx_input_converters.py contract_address={UNISWAP_V2_ADDRESS} auto_offset_reset=earliest".split(" "),
     #     environment=dict(
-    #                     NETWORK = 'mainnet',  
+    #                     NETWORK = os.environ['NETWORK'],  
     #                     KAFKA_HOST = os.env,
     #                     TOPIC_INPUT = 'uniswap_v2_txs',
     #                     TOPIC_OUTPUT = 'inputs_uniswap_v2_txs',
@@ -335,7 +343,7 @@ with DAG(
     #     container_name="decode_uniswap_v3_input_txs",
     #     entrypoint=f"python tx_input_converters.py contract_address={UNISWAP_V3_ADDRESS} auto_offset_reset=earliest".split(" "),
     #     environment=dict(
-    #                     NETWORK = 'mainnet', 
+    #                     NETWORK = os.environ['NETWORK'], 
     #                     KAFKA_HOST = os.env,
     #                     TOPIC_INPUT = 'uniswap_v3_txs',
     #                     TOPIC_OUTPUT = 'inputs_uniswap_v3_txs',

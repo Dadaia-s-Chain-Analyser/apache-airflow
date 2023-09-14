@@ -1,26 +1,7 @@
 import json, os, subprocess
 from datetime import datetime as dt
 from caixa_de_ferramentas.redis_client_api import RedisAPI
-
-
-
-class Ingestor:
-
-    def __init__(self, redis_client):
-        self.redis_client = redis_client
-
-
-    def form_filename(self, data):
-        timestamp_start, timestamp_end = data[0]['timeStamp'], data[-1]['timeStamp']
-        odate = dt.fromtimestamp(int(timestamp_start)).strftime('%Y%m%d')
-        path = f'transactions_{timestamp_start}_to_{timestamp_end}_{odate}.json'
-        return path
-    
-
-    def gen_redis_key(self, contract_name, start_date):
-        redis_key = f'{contract_name}_{start_date}'
-        return redis_key
-    
+from ingestor import Ingestor
 
 
 class HadoopIngestor:
@@ -62,8 +43,10 @@ class HadoopIngestor:
 
 
 
-def run_ingestor(network, contract_name, start_date):
-
+def store_cached_data_to_hadoop(**kwargs):
+    network = kwargs['NETWORK']
+    contract_name = kwargs['CONTRACT_NAME']
+    start_date = kwargs['START_DATE']
     container_name = network
     redis_client = RedisAPI(host='redis', port=6379)
     blob_ingestor = HadoopIngestor(redis_client, container_name, contract_name, start_date)

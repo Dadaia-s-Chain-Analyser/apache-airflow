@@ -3,8 +3,6 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 from airflow.operators.bash import BashOperator
-from airflow.providers.docker.operators.docker import DockerOperator
-from scripts.python.ingest_contract_txs_to_hadoop import run_ingestor
 
 default_args ={
     "owner": "airflow",
