@@ -234,7 +234,7 @@ with DAG(
 
     end_task = BashOperator(
         task_id='end_task',
-        bash_command='''sleep 2'''
+        bash_command='''sleep 3'''
     )
     # get_aave_v3_txs = DockerOperator(
     #     task_id='get_aave_v3_txs',

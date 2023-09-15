@@ -60,7 +60,6 @@ USER airflow
 # Create the folder dags inside $AIRFLOW_HOME
 RUN mkdir -p ${AIRFLOW_HOME}/dags
 
-RUN echo "HELLO"
 COPY ./airflow.cfg ${AIRFLOW_HOME}/airflow.cfg
 COPY ./dags ${AIRFLOW_HOME}/dags
 
