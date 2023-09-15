@@ -12,9 +12,9 @@ if __name__ == "__main__":
     # Initialize Spark Session
     spark = SparkSession \
         .builder \
-        .appName("Forex processing") \
+        .appName("Blockhain transactions ingestion") \
         .config("spark.sql.warehouse.dir", warehouse_location) \
-        .config("spark.driver.memory", "10G") \
+        .config("spark.driver.memory", "2G") \
         .enableHiveSupport() \
         .getOrCreate()
 
