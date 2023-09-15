@@ -38,4 +38,4 @@ jobs:
 
 
     - name: docker images
-      run: docker service update --image ${{ steps.my_step.outputs.MINHA_VARIAVEL }} airflow
+      run: docker service update --image ${{ steps.my_step.outputs.MINHA_VARIAVEL }} cluster_airflow
