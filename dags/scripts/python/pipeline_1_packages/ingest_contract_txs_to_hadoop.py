@@ -21,7 +21,6 @@ class HadoopIngestor:
         subprocess.run(["hdfs", "dfs", "-mkdir", "-p", directory])
         subprocess.run(["hdfs", "dfs", "-put", path, directory])
         subprocess.run(["hdfs", "dfs", "-ls", directory])
-        subprocess.run(["rm", path])
 
 
     def write_json(self, data, path):
