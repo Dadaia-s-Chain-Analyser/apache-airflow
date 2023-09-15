@@ -23,12 +23,6 @@ default_args ={
 }
 
 
-SPN_CREDENTIALS = dict(
-        AZURE_CLIENT_ID = os.environ['AZURE_CLIENT_ID'],
-        AZURE_TENANT_ID = os.environ['AZURE_TENANT_ID'],
-        AZURE_CLIENT_SECRET = os.environ['AZURE_CLIENT_SECRET'],
-)
-
 KEY_VAULT_SCAN_NAME = "DMEtherscanAsAService"
 
 
@@ -60,8 +54,7 @@ with DAG(
                         CONTRACT = "0x7d2768dE32b0b80b7a3454c06BdAc94A69DDc7A9",
                         CONTRACT_NAME = 'aave_v2',
                         START_DATE = '{{ prev_ds }}',
-                        END_DATE = '{{ ds }}',
-                        **SPN_CREDENTIALS
+                        END_DATE = '{{ ds }}'
         )
     )
 
@@ -79,8 +72,7 @@ with DAG(
                         CONTRACT = "0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2",
                         CONTRACT_NAME = 'aave_v3',
                         START_DATE = '{{ prev_ds }}',
-                        END_DATE = '{{ ds }}',
-                        **SPN_CREDENTIALS
+                        END_DATE = '{{ ds }}'
         )
     )
 
@@ -97,8 +89,7 @@ with DAG(
                         CONTRACT = "0x7a250d5630B4cF539739dF2C5dAcb4c659F2488D",
                         CONTRACT_NAME = 'uniswap_v2',
                         START_DATE = '{{ prev_ds }}',
-                        END_DATE = '{{ ds }}',
-                        **SPN_CREDENTIALS
+                        END_DATE = '{{ ds }}'
         )
     )
 
@@ -145,7 +136,6 @@ with DAG(
                         CONTRACT_NAME = 'aave_v2',
                         START_DATE = '{{ prev_ds }}',
                         STORAGE_ACCOUNT_NAME = 'dadaiastorage',
-                        **SPN_CREDENTIALS
         )
     )
 
@@ -159,7 +149,6 @@ with DAG(
                         CONTRACT_NAME = 'aave_v3',
                         START_DATE = '{{ prev_ds }}',
                         STORAGE_ACCOUNT_NAME = 'dadaiastorage',
-                        **SPN_CREDENTIALS
         )
     )
 
@@ -173,7 +162,6 @@ with DAG(
                         CONTRACT_NAME = 'uniswap_v2',
                         START_DATE = '{{ prev_ds }}',
                         STORAGE_ACCOUNT_NAME = 'dadaiastorage',
-                        **SPN_CREDENTIALS
         )
     )
 
