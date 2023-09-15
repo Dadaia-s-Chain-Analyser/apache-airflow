@@ -1,11 +1,10 @@
 import os, logging
 from datetime import datetime
 from azure.identity import DefaultAzureCredential
-from ingestor import Ingestor
 from caixa_de_ferramentas.redis_client_api import RedisAPI
 from caixa_de_ferramentas.azure_key_vault_api import KeyVaultAPI
 from caixa_de_ferramentas.etherscan_api import EthercanAPI
-
+from scripts.python.pipeline_1_packages.ingestor import Ingestor
 
 class BatchContractTransactions:
 

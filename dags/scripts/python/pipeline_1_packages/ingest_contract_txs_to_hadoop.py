@@ -1,7 +1,7 @@
 import json, os, subprocess
 from datetime import datetime as dt
 from caixa_de_ferramentas.redis_client_api import RedisAPI
-from ingestor import Ingestor
+from scripts.python.pipeline_1_packages.ingestor import Ingestor
 
 
 class HadoopIngestor:
