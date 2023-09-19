@@ -26,15 +26,11 @@ class HadoopIngestor:
 
     def write_json(self, data, path):
         with open(path, 'w') as file:
-            print("Data aqui")
-            print(path)
-            print(data)
-
-            #file.write(json.dumps(data))
+            subprocess.run(["mkdir", "-p", "/marco/teste/"])
+            file.write(json.dumps(data))
             json.dump(data, file, ensure_ascii=False, indent=4)
 
-
-            
+ 
     def ingest(self, directory='/user/hadoop/'):
         odate = dt.strftime(dt.strptime(self.start_date, '%Y-%m-%d'), '%Y%m%d')
         key = self.ingestor.gen_redis_key(self.contract_name, odate)
@@ -42,8 +38,8 @@ class HadoopIngestor:
         if len(data) == 0: 
             print(f"Data for {key} is empty")
             return
-        path = os.path.join("/tmp", self.ingestor.form_filename(data))
-        print(data)
+        path = os.path.join("/marco/teste/", self.ingestor.form_filename(data))
+      
         self.write_json(data, path)
         self.upload_to_hadoop(path, directory=directory)
 
