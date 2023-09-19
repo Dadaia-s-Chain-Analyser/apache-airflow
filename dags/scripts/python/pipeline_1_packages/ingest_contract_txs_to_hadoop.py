@@ -38,7 +38,7 @@ class HadoopIngestor:
         if len(data) == 0: 
             print(f"Data for {key} is empty")
             return
-        path = os.path.join("/marco/teste/", self.ingestor.form_filename(data))
+        path = os.path.join("/opt/airflow/dags/tmp/", self.ingestor.form_filename(data))
       
         self.write_json(data, path)
         self.upload_to_hadoop(path, directory=directory)
