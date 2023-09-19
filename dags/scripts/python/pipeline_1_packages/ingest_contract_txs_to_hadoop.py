@@ -25,8 +25,8 @@ class HadoopIngestor:
 
 
     def write_json(self, data, path):
+        subprocess.run(["mkdir", "-p", "/marco/teste/"])
         with open(path, 'w') as file:
-            subprocess.run(["mkdir", "-p", "/marco/teste/"])
             file.write(json.dumps(data))
             json.dump(data, file, ensure_ascii=False, indent=4)
 
