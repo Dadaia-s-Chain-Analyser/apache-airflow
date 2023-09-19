@@ -15,17 +15,13 @@ class HadoopIngestor:
 
 
     def upload_to_hadoop(self, path, directory):
-        print(f"Uploading TAUAN {path} to HADOOP")
-        subprocess.run(["ls", path])
-        directory = os.path.join('/', self.container, directory, "/")
-        print(f"Uploading TAUAN {path} to HADOOP {directory}")
+        directory = os.path.join('/', self.container, directory)
         subprocess.run(["hdfs", "dfs", "-mkdir", "-p", directory])
         subprocess.run(["hdfs", "dfs", "-put", path, directory])
-        subprocess.run(["hdfs", "dfs", "-ls", directory])
 
 
     def write_json(self, data, path):
-        subprocess.run(["mkdir", "-p", "/marco/teste/"])
+        subprocess.run(["mkdir", "-p", "/opt/airflow/dags/tmp/"])
         with open(path, 'w') as file:
             file.write(json.dumps(data))
             json.dump(data, file, ensure_ascii=False, indent=4)
