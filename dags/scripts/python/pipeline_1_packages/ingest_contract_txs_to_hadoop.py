@@ -16,6 +16,7 @@ class HadoopIngestor:
 
     def upload_to_hadoop(self, path, directory):
         print(f"Uploading TAUAN {path} to HADOOP")
+        subprocess.run(["ls", path])
         directory = os.path.join('/', self.container, directory)
         print(f"Uploading TAUAN {path} to HADOOP {directory}")
         subprocess.run(["hdfs", "dfs", "-mkdir", "-p", directory])
@@ -25,6 +26,10 @@ class HadoopIngestor:
 
     def write_json(self, data, path):
         with open(path, 'w') as file:
+            print("Data aqui")
+            print(path)
+            print(data)
+
             file.write(json.dumps(data))
 
             
