@@ -32,12 +32,17 @@ with DAG(
             schedule_interval='@daily', 
             default_args=default_args,
             max_active_runs=1,
-            catchup=False
+            catchup=True
         ) as dag:
 
 
     starting_process = BashOperator(
         task_id='starting_task',
+        bash_command='''sleep 2'''
+    )
+
+    starting_process_2 = BashOperator(
+        task_id='starting_process_2',
         bash_command='''sleep 2'''
     )
 
@@ -357,9 +362,9 @@ with DAG(
 
 
 
-    starting_process >> get_aave_v2_txs >> [ingest_aave_v2_txs_to_hadoop, ingest_aave_v2_txs_to_azure] >> delete_aave_v2_cache
-    starting_process >> get_aave_v3_txs >> [ingest_aave_v3_txs_to_hadoop, ingest_aave_v3_txs_to_azure] >> delete_aave_v3_cache
-    starting_process >> get_uniswap_v2_txs >> [ingest_uniswap_v2_txs_to_hadoop, ingest_uniswap_v2_txs_to_azure] >> delete_uniswap_v2_cache
+    starting_process >> starting_process_2 >> get_aave_v2_txs >> [ingest_aave_v2_txs_to_hadoop, ingest_aave_v2_txs_to_azure] >> delete_aave_v2_cache
+    starting_process >> starting_process_2 >> get_aave_v3_txs >> [ingest_aave_v3_txs_to_hadoop, ingest_aave_v3_txs_to_azure] >> delete_aave_v3_cache
+    starting_process >> starting_process_2 >> get_uniswap_v2_txs >> [ingest_uniswap_v2_txs_to_hadoop, ingest_uniswap_v2_txs_to_azure] >> delete_uniswap_v2_cache
     [ delete_aave_v2_cache, delete_aave_v3_cache, delete_uniswap_v2_cache ] >> add_partition_aave_v2_txs_table 
     add_partition_aave_v2_txs_table >> add_partition_aave_v3_txs_table >> add_partition_uniswap_v2_txs_table >> end_task
     #starting_process >> get_uniswap_v2_txs
