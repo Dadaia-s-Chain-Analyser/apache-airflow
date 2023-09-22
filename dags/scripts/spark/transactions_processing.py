@@ -14,7 +14,7 @@ if __name__ == "__main__":
         .builder \
         .appName("Blockhain transactions ingestion") \
         .config("spark.sql.warehouse.dir", warehouse_location) \
-        .config("spark.driver.memory", "2G") \
+        .config("spark.driver.memory", "10G") \
         .enableHiveSupport() \
         .getOrCreate()
 

@@ -213,7 +213,7 @@ with DAG(
         conn_id='spark_conn',
         application='/opt/airflow/dags/scripts/spark/transactions_processing.py',
         verbose=False,
-        conf={'spark.driver.memory': '2G'},
+        conf={'spark.driver.memory': '10G'},
         application_args=['mainnet', 'aave_v2', '{{ ds }}']
     )
 
@@ -223,7 +223,7 @@ with DAG(
         conn_id='spark_conn',
         application='/opt/airflow/dags/scripts/spark/transactions_processing.py',
         verbose=False,
-        conf={'spark.driver.memory': '2G'},
+        conf={'spark.driver.memory': '10G'},
         application_args=['mainnet', 'aave_v3', '{{ ds }}']
     )
 
@@ -233,7 +233,7 @@ with DAG(
         conn_id='spark_conn',
         application='/opt/airflow/dags/scripts/spark/transactions_processing.py',
         verbose=False,
-        conf={'spark.driver.memory': '2G'},
+        conf={'spark.driver.memory': '10G'},
         application_args=['mainnet', 'uniswap_v2', '{{ ds }}']
     )
 
